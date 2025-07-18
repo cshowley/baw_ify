@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image, ImageEnhance, ImageOps
 import argparse
 from tqdm import tqdm
+import subprocess
 
 
 parser = argparse.ArgumentParser()
@@ -85,3 +86,7 @@ def addAudio(audioSource, videoSource, savePath):
     subprocess.run(f'ffmpeg -y -i "{videoSource}" -i "{audioSource}" -c copy "{savePath}"', shell=True)
 
 addAudio(audioSource, videoSource, savePath)
+
+# Clean up temporary files
+os.remove('output.avi')
+os.remove('audio.wav')
