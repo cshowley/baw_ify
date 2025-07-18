@@ -1,0 +1,13 @@
+[project]
+name = "baw-ify"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "av>=15.0.0",
+    "ipython>=8.37.0",
+    "moviepy>=2.2.1",
+    "pillow>=11.3.0",
+    "tqdm>=4.67.1",
+]

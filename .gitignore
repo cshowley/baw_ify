@@ -1,0 +1,6 @@
+.DS_Store
+.venv
+*.mkv
+*.mp3
+*.mp4
+*.wav
