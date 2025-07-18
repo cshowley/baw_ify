@@ -1,78 +1,76 @@
-import PIL
-import av
-import argparse
+import cv2
 import numpy as np
-from tqdm import tqdm
+from PIL import Image
+
+cap = cv2.VideoCapture("test.mkv")
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('filepath')
-args = parser.parse_args()
+# Get video properties (e.g., frame count and frame width)
+# frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))  # Get total number of frames in the video
+# fps = cap.get(cv2.CAP_PROP_FPS)  
+# print(f"Total frames: {frame_count}, FPS: {fps}")
+ 
+# # Read and display each frame of the video
+# while True:
+#     ret, frame = cap.read()
+#     if not ret:
+#         print("End of video or error occurred.")
+#         break
+ 
+#     # Display the frame
+#     cv2.imshow("Video Frame", frame)
+ 
+#     # Wait for 1ms for key press to continue or exit if 'q' is pressed
+#     if cv2.waitKey(1) & 0xFF == ord('q'):
+#         break
 
-# Create a video container and add a video stream
-container = av.open(args.filepath)
-for frame in container.decode(video=0):
-    img = frame.to_image()
-    break
 
-output_container = av.open("video.mp4", mode="w")
-video_stream = output_container.add_stream("libx264", rate=30)  # H.264 codec
-video_stream.width = img.size[0]  # Set resolution (match your frames)
-video_stream.height = img.size[1]
-video_stream.pix_fmt = "yuv420p"  # Required for MP4 compatibility
+ 
+# Open the video file
+cap = cv2.VideoCapture("test.mkv")
+fps = cap.get(cv2.CAP_PROP_FPS) # Get frames per second (FPS)
 
-container = av.open(args.filepath)
-for frame in tqdm(container.decode(video=0)):
-    img = frame.to_image()
-    frame = np.array(img.convert("L"))
-    av_frame = av.VideoFrame.from_ndarray(frame, format="gray8")
-    for packet in video_stream.encode(av_frame):
-        output_container.mux(packet)
+# Check if the video was opened successfully
+if not cap.isOpened():
+    print("Error: Could not open video file.")
+    exit()
+ 
+# Get frame width and height
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+ 
+# Define the codec and create VideoWriter object
+fourcc = cv2.VideoWriter_fourcc(*"XVID")
+out = cv2.VideoWriter("output.avi", fourcc, fps, (frame_width, frame_height))
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("End of video or error occurred.")
+        break
+ 
+    frame = Image.fromarray(frame)
+    frame = np.array(frame.convert("L").convert('RGB'))
+    # Write the frame to the output video file
+    out.write(frame)
+ 
+    # # Display the frame
+    # cv2.imshow("Frame", frame)
+    # if cv2.waitKey(1) & 0xFF == ord('q'):
+    #     break
+ 
+# Release everything
+cap.release()
+out.release()
+cv2.destroyAllWindows()
 
-# Flush remaining packets
-for packet in video_stream.encode():
-    output_container.mux(packet)
+import subprocess
 
-output_container.close()
+subprocess.run("ffmpeg -i test.mkv -ab 160k -ac 2 -ar 44100 -vn audio.wav", shell=True)
 
-audio_stream = next(s for s in container.streams if s.type == "audio")  
-with open("audio.mp3", "wb") as f:
-    for packet in container.demux(audio_stream):  
-        f.write(packet)
+videoSource = "output.avi"
+audioSource = "audio.wav"
+savePath = "output_final.avi"
+def addAudio(audioSource, videoSource, savePath):
+    subprocess.run(f'ffmpeg -y -i "{videoSource}" -i "{audioSource}" -c copy "{savePath}"', shell=True)
 
-# Open video and audio files
-video_container = av.open("video.mp4")
-audio_container = av.open("audio.mp3")
-
-# Create output container with combined streams
-output_container = av.open(f"{args.filepath.split('/')[-1].split('.')[0]}_baw.mp4", mode="w")
-video_stream = output_container.add_stream("copy")  # Copy video stream
-audio_stream = output_container.add_stream("aac", rate=48000)  # Encode audio (AAC for MP4)
-audio_stream.channels = 2
-audio_stream.channel_layout = "stereo"
-
-# Copy video packets
-for packet in video_container.demux():
-    if packet.stream.type == "video":
-        output_container.mux(packet)
-
-# Decode and re-encode audio packets (required for AAC in MP4)
-audio_packets = []
-for packet in audio_container.demux():
-    if packet.stream.type == "audio":
-        for frame in packet.decode():
-            for encoded_packet in audio_stream.encode(frame):
-                output_container.mux(encoded_packet)
-
-# Flush remaining audio packets
-for encoded_packet in audio_stream.encode():
-    output_container.mux(encoded_packet)
-
-# Close containers
-video_container.close()
-audio_container.close()
-output_container.close()
-
-# Delete temporary files
-os.remove('audio.mp3')
-os.remove('video.mp4')
+addAudio(audioSource, videoSource, savePath)
