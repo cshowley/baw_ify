@@ -4,6 +4,7 @@ from PIL import Image, ImageEnhance, ImageOps
 import argparse
 from tqdm import tqdm
 import subprocess
+import os
 
 
 parser = argparse.ArgumentParser()
